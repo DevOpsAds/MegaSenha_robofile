@@ -1,0 +1,871 @@
+cosidere os ajuste de dados para que todas as informaçoes obtitida seja bem organizada em .csv veja 
+saida no display
+
+
+05/09
+05/09
+05/09
+05/09
+05/09
+06/09
+06/09
+08/09
+08/09
+08/09
+
+08/09
+
+MOBILEPAG TIT BANCO 033 174,01-
+B259957- 1: 9014
+
+RES APLIC AUT MAIS 232,39
+74.09092.3
+
+REND PAGO APLIC AUT MAIS 0,03
+74.09092.8
+
+SALDO APLIC AUT MAIS 2.514,45
+SALDO 10,00
+SALDO APLIC AUT MAIS 2.514,45
+SALDO - 10,00
+RSHOP-POSTO QUICK-08/09 20,00-
+32.03900.1 5934 4520 00018
+RSHOP-POSTO QUICK-08/09 159,78=
+32.03903.1 5934 8443 00018
+MOBILEPAG TIT 3771609500 180,00-
+
+32.70447.1 9128
+PIX TRANSF ANDRESS07/09 o
+
+12.67194.1.0 2120060600 ss
+
+    SAIDA DO .CSV ABAIXO 
+
+
+Data,Descrição,Código,Valor
+12/09,MOBILEPAG TIT 4800148270,2.96217.1 9427,"1.783,06"
+12/09,PIX TRANSF ANA LUC12/09,32.61209.1 9136,"3.500,00"
+12/09,PIX TRANSF ANA LUC12/09,32.98933.1 9126,"3.500,00"
+12/09,EST PIX TF ANA LUCIA,76.12029.1 9026,"3.500,00"
+12/09,EST PIX TE ANA LUCIA,76.75359.1 9122,"3.500,00"
+12/09,RES APLIC AUT MAIS,,"10.788,27"
+12/09,REND PAGO APLIC AUT MAIS,,
+
+
+PARA ISSO AJUSTE O CODIGO  ABAIXO:
+def process_extracted_text(text):
+    # Regex para datas, descrições, códigos e valores
+    date_pattern = r"\d{2}/\d{2}"  # Data no formato DD/MM
+    description_pattern = r"[A-Z]+.*"  # Início com letras maiúsculas seguido de qualquer texto
+    code_pattern = r"\d+\.\d+\.\d+ \d+"  # Código no formato N.N.N N
+    value_pattern = r"\d+\.\d+,\d+|-?\d+,\d\d-"  # Valores no formato N.NNN,NN
+
+    # Encontrando os padrões no texto
+    dates = re.findall(date_pattern, text)
+    descriptions = re.findall(description_pattern, text)
+    codes = re.findall(code_pattern, text)
+    values = re.findall(value_pattern, text)
+
+    # Organizar os dados
+    extracted_data = []
+    date_index = 0
+    for i in range(len(descriptions)):
+        data = {
+            "Data": dates[date_index] if date_index < len(dates) else None,
+            "Descrição": descriptions[i],
+            "Código": codes[i] if i < len(codes) else None,
+            "Valor": values[i] if i < len(values) else None
+        }
+        extracted_data.append(data)
+        date_index += 1 if i < len(codes) and i < len(values) else 0
+    
+    return extracted_data
+
+
+RESPOSTA 
+import re
+import pandas as pd
+from csv import QUOTE_NONNUMERIC
+
+def process_extracted_text(text):
+    # Regex para datas, descrições, códigos e valores
+    date_pattern = r"(\d{2}/\d{2})"
+    description_pattern = r"([A-Z].*?)(?=\d{2}\.\d+\.\d+|\d{2}/\d{2}|$)"
+    code_pattern = r"(\d{2}\.\d+\.\d+\.\d+|\d{2}\.\d+\.\d+)"
+    value_pattern = r"(\d+\.\d+,\d+|\d+,\d+)(?=-|\s)"
+    
+    # Encontrando os padrões no texto
+    dates = re.findall(date_pattern, text)
+    descriptions = re.findall(description_pattern, text)
+    codes = re.findall(code_pattern, text)
+    values = re.findall(value_pattern, text)
+
+    # Removendo espaços em branco e ajustando descrições
+    descriptions = [desc.strip().replace('\n', ' ') for desc in descriptions]
+    
+    # Organizar os dados
+    extracted_data = []
+    for i, date in enumerate(dates):
+        # Ajustar índices para valores e códigos com base na data
+        value_index = i if i < len(values) else None
+        code_index = i if i < len(codes) else None
+        
+        # Criar dicionário de dados
+        data = {
+            "Data": date,
+            "Descrição": descriptions[i] if i < len(descriptions) else None,
+            "Código": codes[code_index] if code_index is not None else None,
+            "Valor": values[value_index] if value_index is not None else None
+        }
+        extracted_data.append(data)
+        
+    return extracted_data
+
+# Exemplo de texto extraído (deve ser substituído pelo OCR real ou outro método de entrada)
+text = """
+05/09 INT VIVO-MG 274001439230 58,41-
+05/09 MOBILEPAG TIT BANCO 033 32.59957.1 9014 174,01-
+05/09 RES APLIC AUT MAIS 74.09092.8 232,39
+05/09 REND PAGO APLIC AUT MAIS 74.09092.8 0,03
+05/09 SALDO APLIC AUT MAIS 2.514,45
+06/09 SALDO 10,00
+06/09 SALDO APLIC AUT MAIS 2.514,45
+06/09 SALDO - 10,00
+08/09 RSHOP-POSTO QUICK-08/09 32.03900.1 5934 4520 00018 20,00-
+08/09 RSHOP-POSTO QUICK-08/09 32.03903.1 5934 8443 00018 159,78-
+08/09 MOBILEPAG TIT 3771609500 32.70447.1 9128 180,00-
+08/09 PIX TRANSF ANDRESS07/09 32.57194.1 9123 700,00
+"""
+
+# Processando o texto extraído
+dados_processados = process_extracted_text(text)
+
+# Convertendo os dados processados em um DataFrame
+df = pd.DataFrame(dados_processados)
+
+# Salvar o DataFrame em um arquivo CSV
+csv_path = '/mnt/data/transacoes.csv'
+df.to_csv(csv_path, index=False, header=True, quoting=QUOTE_NONNUMERIC)
+
+csv_path
+
+
+
+
+
+
+
+
+
+import pandas as pd
+import re
+
+# Função para processar o texto e extrair os dados
+def process_extracted_text(text):
+    # Lista para armazenar os dados extraídos
+    extracted_data = []
+
+    # Split o texto em linhas
+    lines = text.split('\n')
+
+    # Variáveis para manter os valores atuais
+    current_date = None
+    current_description = None
+    current_code = None
+    current_value = None
+
+    # Iterar sobre cada linha do texto
+    for line in lines:
+        # Ignorar linhas que contêm "SALDO"
+        if "SALDO" in line:
+            continue
+
+        # Encontrar a data
+        date_match = re.search(r'\d{2}/\d{2}', line)
+        if date_match:
+            current_date = date_match.group()
+
+        # Encontrar o código
+        code_match = re.search(r'\d{2}\.\d{5}\.\d', line)
+        if code_match:
+            current_code = code_match.group()
+
+        # Encontrar o valor
+        value_match = re.search(r'\d+\.\d{2,},\d{2}-?', line)
+        if value_match:
+            current_value = value_match.group().replace('.', '').replace(',', '.')
+            if current_value.endswith('-'):
+                current_value = '-' + current_value[:-1]
+
+        # Se uma linha não contém "SALDO" mas tem conteúdo, então é uma descrição
+        if line and "SALDO" not in line and not date_match and not code_match and not value_match:
+            current_description = line
+
+        # Se todos os componentes estão presentes, salvar a transação
+        if all([current_date, current_description, current_code, current_value]):
+            extracted_data.append({
+                'Data': current_date,
+                'Descrição': current_description,
+                'Código': current_code,
+                'Valor': current_value
+            })
+            # Resetar para a próxima transação
+            current_description = None
+            current_code = None
+            current_value = None
+
+    return extracted_data
+
+# Texto de exemplo com os dados extraídos do OCR
+text = """
+05/09 INT VIVO-MG 274001439230 58,41-
+05/09 MOBILEPAG TIT BANCO 033 32.59957.1 9014 174,01-
+05/09 RES APLIC AUT MAIS 74.09092.8 232,39
+05/09 REND PAGO APLIC AUT MAIS 74.09092.8 0,03
+05/09 SALDO APLIC AUT MAIS 2.514,45
+06/09 SALDO 10,00
+06/09 SALDO APLIC AUT MAIS 2.514,45
+06/09 SALDO - 10,00
+08/09 RSHOP-POSTO QUICK-08/09 32.03900.1 5934 4520 00018 20,00-
+08/09 RSHOP-POSTO QUICK-08/09 32.03903.1 5934 8443 00018 159,78-
+08/09 MOBILEPAG TIT 3771609500 32.70447.1 9128 180,00-
+08/09 PIX TRANSF ANDRESS07/09 32.57194.1 9123 700,00
+"""
+
+# Processar o texto e obter os dados formatados
+dados_formatados = process_extracted_text(text)
+
+# Criar um DataFrame a partir dos dados extraídos
+df = pd.DataFrame(dados_formatados)
+
+# Salvar os dados em um arquivo CSV
+csv_file_path = '/mnt/data/processed_transactions.csv'
+df.to_csv(csv_file_path, index=False, header=True)
+
+csv_file_path
+
+
+
+
+
+def process_extracted_text(text):
+    # Regex para datas, descrições, códigos e valores
+    date_pattern = r"(\d{2}/\d{2})"
+    description_pattern = r"([A-Z].*?)(?=\d{2}\.\d+\.\d+|\d{2}/\d{2}|$)"
+    code_pattern = r"(\d{2}\.\d+\.\d+\.\d+|\d{2}\.\d+\.\d+)"
+    value_pattern = r"(\d+\.\d+,\d+|\d+,\d+)(?=-|\s)"
+    
+    # Encontrando os padrões no texto
+    dates = re.findall(date_pattern, text)
+    descriptions = re.findall(description_pattern, text)
+    codes = re.findall(code_pattern, text)
+    values = re.findall(value_pattern, text)
+
+    # Removendo espaços em branco e ajustando descrições
+    descriptions = [desc.strip().replace('\n', ' ') for desc in descriptions]
+    
+    # Organizar os dados
+    extracted_data = []
+    for i, date in enumerate(dates):
+        # Ajustar índices para valores e códigos com base na data
+        value_index = i if i < len(values) else None
+        code_index = i if i < len(codes) else None
+        
+        # Criar dicionário de dados
+        data = {
+            "Data": date,
+            "Descrição": descriptions[i] if i < len(descriptions) else None,
+            "Código": codes[code_index] if code_index is not None else None,
+            "Valor": values[value_index] if value_index is not None else None
+        }
+        extracted_data.append(data)
+        
+    return extracted_data
+
+
+
+def process_extracted_text(text):
+    # Regex para datas, descrições, códigos e valores
+    date_pattern = r"(\d{2}/\d{2})"
+    description_pattern = r"([A-Z][^\d]+?)(?=\d{2}\.\d+\.\d+|\d{2}/\d{2}|$)"
+    code_pattern = r"(\d{2}\.\d+\.\d+\.\d+|\d{2}\.\d+\.\d+)"
+    value_pattern = r"(\d+\.\d+,\d+|\d+,\d+)(?=-|\s)"
+    
+    # Encontrando os padrões no texto
+    dates = re.findall(date_pattern, text)
+    descriptions = re.findall(description_pattern, text)
+    codes = re.findall(code_pattern, text)
+    values = re.findall(value_pattern, text)
+
+    # Removendo espaços em branco e ajustando descrições
+    descriptions = [desc.strip().replace('\n', ' ') for desc in descriptions]
+
+    # Ajustar índices para valores e códigos com base na data
+    # Assumindo que cada data se refere a uma transação e ignorando datas extras
+    data_index = 0
+    extracted_data = []
+    for i in range(len(descriptions)):
+        # Se uma descrição for encontrada sem uma data correspondente, use a última data disponível
+        if data_index >= len(dates):
+            data_index = len(dates) - 1
+
+        value_index = i if i < len(values) else None
+        code_index = i if i < len(codes) else None
+
+        # Criar dicionário de dados
+        data = {
+            "Data": dates[data_index],
+            "Descrição": descriptions[i],
+            "Código": codes[code_index] if code_index is not None else None,
+            "Valor": values[value_index] if value_index is not None else None
+        }
+        extracted_data.append(data)
+
+        # Incrementar o índice da data somente se uma data foi usada para uma descrição
+        if i < len(codes) and i < len(values):
+            data_index += 1
+
+    return extracted_data
+
+# Exemplo de texto extraído (deve ser substituído pelo OCR real ou outro método de entrada)
+text = """
+PINVORS CLARC01/09
+SE PINIS. 1 9953
+PINTORS TELEFONICA 01/09
+05/09 MOBILEPAG TIT BANCO 033 32.59957.1 9014 174,01-
+05/09 RES APLIC AUT MAIS 74.09092.8 232,39
+05/09 REND PAGO APLIC AUT MAIS 74.09092.8 0,03
+06/09 SALDO APLIC AUT MAIS 2.514,45
+06/09 SALDO 10,00
+08/09 RSHOP-POSTO QUICK-08/09 32.03900.1 5934 4520 00018 20,00-
+08/09 RSHOP-POSTO QUICK-08/09 32.03903.1 5934 8443 00018 159,78-
+"""
+
+# Processar o texto e obter os dados formatados
+dados_formatados = process_extracted_text(text)
+
+# Imprimir os dados formatados para verificação
+for entry in dados_formatados:
+    print(entry)
+,
+
+
+ajuste o patern de valor para que ele obtenha o sinal negativo  no fim e coloque na frente ajuste  ele para reconhecer o  "184, 112" como 184,11-
+value_pattern = r"(\d+\.\d+,\d+|\d+,\d+)(?=-|\s)"
+
+
+import re
+
+def process_extracted_text(text):
+    # Regex para datas, descrições, códigos e valores
+    date_pattern = r"(\d{2}/\d{2})"
+    description_pattern = r"([A-Z][^\d\n]+)(?=\s*\d{2}\.\d+\.\d+|\Z)"
+    code_pattern = r"(\b\d{2}\.\d{2,}\.\d+\b)"
+    value_pattern = r"(\d{1,3}(?:\.\d{3})*,\d{2})-?|\d+,\d\d-"
+
+    # Encontrando os padrões no texto
+    dates = re.findall(date_pattern, text)
+    descriptions = re.findall(description_pattern, text)
+    codes = re.findall(code_pattern, text)
+    values = re.findall(value_pattern, text)
+    
+    # Ajustar os valores para formatar corretamente os números negativos
+    values = [value if not value.endswith('-') else '-' + value.replace('-', '') for value in values]
+
+    # Removendo espaços em branco e ajustando descrições
+    descriptions = [desc.strip().replace('\n', ' ') for desc in descriptions]
+    
+    # Organizar os dados
+    extracted_data = []
+    date_index = 0
+    code_index = 0
+    value_index = 0
+
+    # Iterando sobre as descrições para montar os dados
+    for description in descriptions:
+        # Adicionando condição para evitar índices fora do intervalo
+        if date_index < len(dates):
+            date = dates[date_index]
+        if code_index < len(codes):
+            code = codes[code_index]
+        if value_index < len(values):
+            value = values[value_index]
+
+        # Incrementando os índices de código e valor se houver um valor correspondente
+        if value_index < len(values) and value:
+            value_index += 1
+            code_index += 1
+        
+        # Incrementando o índice da data se a descrição não for uma continuação da anterior
+        if date_index + 1 < len(dates) and not description.startswith(' '):
+            date_index += 1
+
+        # Criando o dicionário de dados para cada linha
+        data = {
+            "Data": date,
+            "Descrição": description,
+            "Código": code if ' ' not in description else None,  # Ajuste conforme a regra de negócios
+            "Valor": value if ' ' not in description else None   # Ajuste conforme a regra de negócios
+        }
+        extracted_data.append(data)
+
+    return extracted_data
+
+# Substitua 'your_text_here' pelo texto extraído real
+your_text_here = """
+05/09 INT VIVO-MG 274001439230 58,41-
+...
+"""
+
+# Processar o texto extraído
+processed_data = process_extracted_text(your_text_here)
+
+# Exibir os dados processados
+for data in processed_data:
+    print(data)
+
+
+
+
+---------------------------------------
+def process_extracted_text(text):
+    # Regex patterns
+    date_pattern = r"\d{2}/\d{2}"
+    description_pattern = r"([A-Z][A-Z\s]+)"
+    code_pattern = r"(\d{2}\.\d{5}\.\d)"
+    # Adjusted value pattern to capture negative values at the end and handle "184, 112" as "184,11-"
+    value_pattern = r"(\d{1,3}(?:\.\d{3})*,\d{2})-?|\d+,\d{2}-"
+
+    # Split text into lines and initialize variables
+    lines = text.split('\n')
+    data_list = []
+    current_date = None
+
+    for line in lines:
+        line = line.strip()
+        date_match = re.search(date_pattern, line)
+        desc_match = re.search(description_pattern, line)
+        code_match = re.search(code_pattern, line)
+        value_matches = re.findall(value_pattern, line)
+
+        # Process dates
+        if date_match:
+            current_date = date_match.group()
+
+        # Process values and descriptions
+        if desc_match and not code_match:  # Only descriptions without a code
+            desc = desc_match.group()
+            if value_matches:  # Values on the same line as description
+                for value in value_matches:
+                    value = value.replace(',', '.')
+                    if value.endswith('-'):
+                        value = '-' + value[:-1]
+                    data_list.append((current_date, desc, None, value))
+            else:  # Descriptions without values
+                data_list.append((current_date, desc, None, None))
+
+        # Process codes
+        if code_match:
+            code = code_match.group()
+            if value_matches:  # Values on the same line as code
+                for value in value_matches:
+                    value = value.replace(',', '.')
+                    if value.endswith('-'):
+                        value = '-' + value[:-1]
+                    data_list.append((current_date, None, code, value))
+            else:  # Codes without values
+                data_list.append((current_date, None, code, None))
+
+    # Convert to dataframe
+    df = pd.DataFrame(data_list, columns=["Data", "Descrição", "Código", "Valor"])
+    return df
+
+# Sample text to process
+sample_text = """
+01/09 PINVORS CLARC01/09
+SE PINIS. 1 9953
+PINTORS TELEFONICA 01/09
+32452260, 9126
+
+RES APLIC AUT MAIS
+74.09114.8
+
+REND PAGO APLIC AUT MAIS
+74.09114.8
+
+184, 112
+57,00-
+241,08
+
+0,03
+"""
+
+# Call the function and print the results
+df_extracted = process_extracted_text(sample_text)
+print(df_extracted)
+
+
+import re
+
+texto = "seu texto aqui"
+espacos_em_branco = re.findall(r'\s', texto)
+contador = len(espacos_em_branco)
+print(f"Número total de espaços em branco: {contador}")
+
+
+import re
+
+texto = "seu texto aqui"
+espacos = re.findall(r' ', texto)
+contador = len(espacos)
+print(f"Número de espaços: {contador}")
+
+
+quebras_de_linha = re.findall(r'\n', texto)
+contador = len(quebras_de_linha)
+contador
+
+
+import re
+
+def process_extracted_text(text):
+    # Substituir o terceiro dígito após uma vírgula por um hífen
+    texto_modificado = re.sub(r',(\d{2})(\d)', r',\1-', text)
+
+    # Padrões de regex
+    value_pattern = r"(\d+\.\d+,\d+|\d+,\d+)(?=-|\s)"
+    
+    # Encontrando os valores usando um loop for ao invés de findall
+    values = []
+    for match in re.finditer(value_pattern, texto_modificado):
+        values.append(match.group(0))
+
+    # O restante da função...
+    # [inserir aqui o restante do código necessário]
+
+    return values
+
+# Testar a função com um texto de exemplo
+texto_exemplo = """
+32452260,9126, mais texto aqui
+Outro valor: 74.09114.8, e mais alguns detalhes.
+Finalizando com 241,08.
+"""
+
+dados_extraidos = process_extracted_text(texto_exemplo)
+print(dados_extraidos)
+
+
+
+-*****************-----**************-
+import re
+
+def process_extracted_text(text):
+    # Substituir o terceiro dígito após uma vírgula por um hífen
+    texto_modificado = re.sub(r',(\d{2})(\d)', r',\1-', text)
+
+    # Padrão de regex ajustado para excluir formatos como 32452260,91-6
+    value_pattern = r"(\d+\.\d+,\d+|\d+,\d+)(?=[^-])"
+
+    # Encontrando os valores usando um loop for ao invés de findall
+    values = []
+    for match in re.finditer(value_pattern, texto_modificado):
+        if '-' not in match.group(0):
+            values.append(match.group(0))
+
+    return values
+
+# Testar a função com um texto de exemplo
+texto_exemplo = """
+32452260,9126, mais texto aqui
+Outro valor: 74.09114.8, e mais alguns detalhes.
+Finalizando com 241,08.
+32452260,91-6 não é um valor.
+"""
+
+dados_extraidos = process_extracted_text(texto_exemplo)
+print(dados_extraidos)
+.
+
+
+    values = []
+    for match in re.finditer(value_pattern, text):
+        values.append(match.group(0))
+
+
+
+
+        ***¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+
+import re
+
+
+def process_extracted_text(text):
+    # Remover espaços após as vírgulas e substituir o terceiro dígito após a vírgula por um hífen
+    text = re.sub(r',(\d{2})(\d)', r',\1-', text)
+    text = re.sub(r',\s+', ',', text)
+    
+    # Padrões de regex
+    date_pattern = r"(\d{2}/\d{2})"
+    description_pattern = r"([A-Z\s]+)(?=\d{2}/\d{2})"
+    code_pattern = r"(\d{2}\.\d{2,}\.\d{2,})"
+    value_pattern = r"(\d{1,3},\d{2})(?=\s|$)"
+    
+    # Encontrando os padrões no texto
+    dates = re.findall(date_pattern, text)
+    descriptions = re.findall(description_pattern, text)
+    codes = re.findall(code_pattern, text)
+    
+    # Encontrando os valores usando um loop for ao invés de findall
+    values = []
+    for match in re.finditer(value_pattern, text):
+        # Excluindo os padrões que terminam com hífen
+        if not match.group(0).endswith('-'):
+            values.append(match.group(0))
+
+    # Estruturar os dados extraídos
+    extracted_data = []
+    for i, desc in enumerate(descriptions):
+        data_entry = {"Data": None, "Descrição": desc, "Código": None, "Valor": None}
+        if i < len(dates):
+            data_entry["Data"] = dates[i]
+        if i < len(codes):
+            data_entry["Código"] = codes[i]
+        if i < len(values):
+            data_entry["Valor"] = values[i]
+        extracted_data.append(data_entry)
+
+    return extracted_data
+
+# Testar a função com o texto fornecido
+extracted_data = process_extracted_text(texto)
+extracted_data
+import re
+
+# Define a função que processa o texto extraído
+def process_extracted_text(text):
+    # Substituir o terceiro dígito após uma vírgula por um hífen
+    text = re.sub(r',(\d{2})(\d)', r',\1-', text)
+    text = re.sub(r',\s+', ',', text)
+    
+    # Padrões de regex
+    date_pattern = r"(\d{2}/\d{2})"
+    description_pattern = r"([A-Z\s]+)(?=\d{2}/\d{2})"
+    code_pattern = r"(\d{2}\.\d{2,}\.\d{2,})"
+    # Regex para valores: aceita números com até 5 dígitos antes da vírgula, excluindo aqueles que terminam com hífen
+    value_pattern = r"(\b\d{1,5},\d{1,2}\b)(?!\-)"
+
+    # Encontrando os padrões no texto
+    dates = re.findall(date_pattern, text)
+    descriptions = re.findall(description_pattern, text)
+    codes = re.findall(code_pattern, text)
+    
+    # Encontrando os valores
+    values = []
+    for match in re.finditer(value_pattern, text):
+        # Se o valor não termina com hífen e tem até 5 dígitos antes da vírgula, inclui na lista
+        value = match.group(0)
+        if not value.endswith('-') and len(value.split(',')[0]) <= 5:
+            # Se tiver apenas um dígito após a vírgula, negativa o valor
+            if len(value.split(',')[1]) == 1:
+                value = "-" + value
+            values.append(value)
+
+    # Estruturar os dados extraídos
+    extracted_data = []
+    for i, desc in enumerate(descriptions):
+        # Preparar a entrada de dados
+        data_entry = {
+            "Data": dates[i] if i < len(dates) else None,
+            "Descrição": desc.strip() if desc else None,
+            "Código": codes[i] if i < len(codes) else None,
+            "Valor": values[i] if i < len(values) else None
+        }
+        extracted_data.append(data_entry)
+
+    return extracted_data
+
+# Executar a função e imprimir os dados extraídos
+extracted_data = process_extracted_text(texto)
+extracted_data
+
+
+
+5555555555555555555555555
+        # Excluindo os padrões que terminam com hífen
+        if len(match.group(0).split(',')[0]) == 1:
+               print ("value")
+
+
+     import re
+
+def ajustar_casas_decimais(texto):
+    # Encontrar todos os números com casas decimais na string
+    numeros = re.findall(r"\d+\.\d+", texto)
+
+    # Processar cada número encontrado
+    for num in numeros:
+        # Dividir o número em parte inteira e decimal
+        parte_inteira, parte_decimal = num.split('.')
+
+        # Se houver exatamente 3 casas decimais, remover as duas últimas
+        if len(parte_decimal) == 3:
+            num_ajustado = parte_inteira + '.' + parte_decimal[0]
+            # Substituir o número original na string pelo número ajustado
+            texto = texto.replace(num, num_ajustado)
+
+    return texto
+
+# Testando a função
+exemplo_texto = "O valor é 123.456, e o outro valor é 789.12"
+texto_ajustado = ajustar_casas_decimais(exemplo_texto)
+texto_ajustado
+
+          
+
+          import re
+
+def ajustar_valores(texto):
+    values = []
+    # Encontrar todos os números com casas decimais na string
+    matches = re.finditer(r"\d+,\d+", texto)
+
+    for match in matches:
+        value = match.group(0)
+
+        # Se o número tiver exatamente 3 casas decimais, remover as 2 últimas
+        if len(value.split(',')[1]) == 3:
+            parte_inteira, parte_decimal = value.split(',')
+            value = parte_inteira + ',' + parte_decimal[0]
+        
+        values.append(value)
+
+    return values
+
+# Testando a função
+exemplo_texto = "O valor é 123,456, o outro valor é 789,1 e outro ainda é 456,78"
+valores_ajustados = ajustar_valores(exemplo_texto)
+valores_ajustados
+
+
+
+import re
+
+def ajustar_valores(texto):
+    values = []
+    # Encontrar todos os números com casas decimais na string
+    matches = re.finditer(r"\d+,\d+", texto)
+
+    for match in matches:
+        # Extrair o valor correspondente
+        value = match.group(0)
+
+        # Se o número tiver exatamente 3 casas decimais, manter apenas a primeira casa decimal
+        if len(value.split(',')[1]) == 3:
+            parte_inteira, parte_decimal = value.split(',')
+            # Criar uma nova string com a alteração desejada
+            value_ajustado = parte_inteira + ',' + parte_decimal[0]
+            values.append(value_ajustado)
+        else:
+            # Se não atender ao critério, adicionar o valor original
+            values.append(value)
+
+    return values
+
+# Testando a função
+exemplo_texto = "O valor é 123,456, o outro valor é 789,1 e outro ainda é 456,78"
+valores_ajustados = ajustar_valores(texto=exemplo_texto)
+valores_ajustados
+
+
+
+lista = [10, 20, 30, 40, 50]
+
+# Suponha que você queira encontrar o índice do valor 30 na lista
+valor = 30
+
+# Usando o método .index() para encontrar o índice
+indice = lista.index(valor)
+
+print("O índice do valor", valor, "é:", indice)
+
+
+ndice = lista.index(valor)
+
+import re
+
+# Exemplo de string
+texto = "O valor é 123,456 e precisa ser ajustado."
+
+# Regex para encontrar números com três algarismos após a vírgula
+regex = r"\d+,\d{3}"
+
+# Procurar pela regex no texto
+match = re.search(regex, texto)
+
+if match:
+    # Separar a parte inteira e decimal
+    partes = match.group(0).split(',')
+
+    # Verificar se a parte decimal tem 3 algarismos
+    if len(partes[1]) == 3:
+        # Modificar o número para manter apenas o primeiro algarismo decimal
+        numero_modificado = partes[0] + ',' + partes[1][0]
+
+        print("Número original:", match.group(0))
+        print("Número modificado:", numero_modificado)
+else:
+    print("Nenhum número com três algarismos após a vírgula foi encontrado.")
+
+
+
+import time
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
+class MyHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        if not event.is_directory and event.src_path.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):
+            print(f"Última imagem adicionada: {event.src_path}")
+
+if __name__ == "__main__":
+    path = '/caminho/para/sua/pasta'  # Substitua pelo caminho da pasta que você deseja monitorar
+    event_handler = MyHandler()
+    observer = Observer()
+    observer.schedule(event_handler, path, recursive=False)
+    observer.start()
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()
+
+
+def schedule_load_image(file_path):
+    root.after(0, load_image_and_extract_text, file_path)
+
+class MyHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        if not event.is_directory and event.src_path.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):
+            print(f"Última imagem adicionada: {event.src_path}")
+            schedule_load_image(event.src_path)  # Usa a função de agendamento
+
+
+
+import time
+from PIL import Image
+import pytesseract
+
+def load_image_and_extract_text(file_path):
+    try:
+        # Aguardar um momento para garantir que o arquivo esteja totalmente escrito
+        time.sleep(1)
+
+        # Tenta abrir a imagem
+        img = Image.open(file_path)
+        text = pytesseract.image_to_string(img, lang='por')
+        return text
+    except IOError as e:
+        return f"Erro ao abrir a imagem no caminho: {file_path}. Erro: {e}"
